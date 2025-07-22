@@ -1,10 +1,4 @@
-import { useCallback } from "react";
-import { useShallow } from "zustand/react/shallow";
-import { EyedropperSampleIcon } from "@phosphor-icons/react";
-
-import { useThrottled } from "@/hooks";
-import { ApplicationTheme, useApplicationStore } from "@/state";
-
+import React from "react";
 import "./ColorInput.css";
 
 type ColorInputProps = {
@@ -12,6 +6,8 @@ type ColorInputProps = {
   onChange?: (color: string) => void;
   className?: string;
 };
+
+const DEFAULT_COLOR = "#000000";
 
 const PRAGMATIC_COLORS = [
   { name: 'Pragmatic Yellow', hex: '#F5B700' },
@@ -30,12 +26,8 @@ const PRAGMATIC_COLORS = [
 ];
 
 const ColorInput = (props: ColorInputProps) => {
-  const zustand = useApplicationStore(useShallow((state) => ({
-    color: state.iconColor,
-    setColor: state.setIconColor,
-  })));
-  const color = props.value ?? zustand.color;
-  const setColor = props.onChange ?? zustand.setColor;
+  const color = props.value ?? DEFAULT_COLOR;
+  const setColor = props.onChange ?? (() => {});
 
   return (
     <div className={`color-picker pragmatic-palette${props.className ? ' ' + props.className : ''}`}>

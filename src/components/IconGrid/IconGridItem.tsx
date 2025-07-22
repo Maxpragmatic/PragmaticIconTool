@@ -38,12 +38,10 @@ const IconGridItem = (props: IconGridItemProps) => {
     setSelectionEntry: state.setSelectionEntry,
   })));
   const isOpen = selection?.name === name;
-  const isNew = entry.tags.includes("*new*");
-  const isUpdated = entry.tags.includes("*updated*");
+  const isPragmatic = name === 'gear'; // Mark 'gear' as a pragmatic icon for now
   const delayRef = useRef<number>(0);
   const offset = useRef({ top: 0, left: 0 });
   const ref = useRef<any>();
-  const isPragmatic = name === 'gear'; // Mark 'gear' as a pragmatic icon for now
 
   const handleOpen = () => setSelectionEntry(isOpen ? null : entry);
 

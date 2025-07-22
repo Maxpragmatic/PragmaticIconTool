@@ -1,34 +1,14 @@
-import React, {
-  useRef,
-  useState,
-  useEffect,
-  useMemo,
-  HTMLAttributes,
-} from "react";
+import React, { useRef, useState, useEffect, HTMLAttributes } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import { Svg2Png } from "svg2png-converter";
 import { saveAs } from "file-saver";
-import {
-  CopyIcon,
-  CheckCircleIcon,
-  ArrowFatLinesDownIcon,
-  XCircleIcon,
-  CaretDoubleLeftIcon,
-  CaretDoubleRightIcon,
-  InfoIcon,
-} from "@phosphor-icons/react";
-import { IconStyle } from "@phosphor-icons/core";
+import { CopyIcon, CheckCircleIcon, ArrowFatLinesDownIcon, XCircleIcon, InfoIcon } from "@phosphor-icons/react";
 import ReactGA from "react-ga4";
 import ReactDOMServer from 'react-dom/server';
 
-import Tabs, { Tab } from "@/components/Tabs";
-import { useMediaQuery, useTransientState, useSessionStorage } from "@/hooks";
-import { SnippetType } from "@/lib";
+import { useMediaQuery } from "@/hooks";
 import { useApplicationStore } from "@/state";
-import { getCodeSnippets, supportsWeight } from "@/utils";
-
-import TagCloud from "./TagCloud";
 import ColorInput from '@/components/ColorInput';
 
 const variants: Record<string, Variants> = {
@@ -43,24 +23,6 @@ const variants: Record<string, Variants> = {
     exit: { y: "60vh" },
   },
 };
-
-const RENDERED_SNIPPETS = [
-  SnippetType.REACT,
-  SnippetType.HTML,
-  SnippetType.VUE,
-  SnippetType.FLUTTER,
-  SnippetType.ELM,
-  SnippetType.SWIFT,
-];
-
-enum CopyType {
-  SVG,
-  SVG_RAW,
-  SVG_DATA,
-  PNG,
-  PNG_DATA,
-  UNICODE,
-}
 
 function cloneWithSize(svg: SVGSVGElement, size: number): SVGSVGElement {
   const sized = svg.cloneNode(true) as SVGSVGElement;
@@ -120,26 +82,9 @@ const Panel = () => {
     setIconSize,
   } = useApplicationStore();
 
-  const [copied, setCopied] = useTransientState<SnippetType | CopyType | false>(
-    false,
-    2000
-  );
-  const ref = useRef<SVGSVGElement>(null);
-
-  const [showMoreActions, setShowMoreActions] = useState<boolean>(false);
   const [showInfo, setShowInfo] = useState(false);
 
-  const [i, setInitialTab] = useSessionStorage("tab", 0);
-
   const isMobile = useMediaQuery("(max-width: 719px)");
-
-  const [snippets, tabs] = useMemo<
-    [Partial<Record<SnippetType, string>>, Tab[]]
-  >(() => {
-    if (!entry) return [{}, []];
-    // Remove code snippet and tag cloud logic
-    return [{}, []];
-  }, [entry, weight, size, color, copied]);
 
   useHotkeys("esc", () => setSelectionEntry(null));
 
@@ -152,68 +97,6 @@ const Panel = () => {
     });
   }, [entry]);
 
-  const handleCopySnippet = (
-    event: React.MouseEvent<HTMLButtonElement, MouseEvent>,
-    type: SnippetType
-  ) => {
-    event.currentTarget.blur();
-    if (!entry) return;
-
-    setCopied(type);
-    const data = snippets[type];
-    data && void navigator.clipboard?.writeText(data);
-  };
-
-  const handleCopySVG = (
-    event: React.MouseEvent<HTMLButtonElement, MouseEvent>
-  ) => {
-    event.currentTarget.blur();
-    if (!entry) return;
-    if (!ref.current) return;
-
-    navigator.clipboard?.writeText(cloneWithSize(ref.current, size).outerHTML);
-    setCopied(CopyType.SVG);
-  };
-
-  const handleCopyDataSVG = (
-    event: React.MouseEvent<HTMLButtonElement, MouseEvent>
-  ) => {
-    event.currentTarget.blur();
-    if (!entry) return;
-    if (!ref.current) return;
-
-    navigator.clipboard?.writeText(
-      "data:image/svg+xml;base64," +
-      btoa(
-        unescape(
-          encodeURIComponent(cloneWithSize(ref.current, size).outerHTML)
-        )
-      )
-    );
-    setCopied(CopyType.SVG_DATA);
-  };
-
-  const handleCopyRawSVG = async () => {
-    if (!entry) return;
-
-    const { name } = entry;
-    const data = await fetch(
-      `https://raw.githubusercontent.com/phosphor-icons/core/main/raw/${weight}/${name}${weight === "regular" ? "" : `-${weight}`
-      }.svg`
-    );
-    const content = await data.text();
-    navigator.clipboard?.writeText(content);
-    setCopied(CopyType.SVG_RAW);
-  };
-
-  const handleCopyUnicode = async () => {
-    if (!entry) return;
-
-    const content = String.fromCharCode(entry.codepoint);
-    navigator.clipboard?.writeText(content);
-    setCopied(CopyType.UNICODE);
-  };
-
   const handleDownloadSVG = (
     event: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) => {
@@ -224,17 +107,6 @@ const Panel = () => {
     const blob = new Blob([cloneWithSize(ref.current, size).outerHTML]);
     saveAs(
       blob,
-      `${entry?.name}${weight === "regular" ? "" : `-${weight}`}.svg`
-    );
-  };
-
-  const handleDownloadRawSVG = async () => {
-    if (!entry) return;
-
-    const { name } = entry;
-    saveAs(
-      `https://raw.githubusercontent.com/phosphor-icons/core/main/raw/${weight}/${name}${weight === "regular" ? "" : `-${weight}`
-      }.svg`,
       `${entry?.name}${weight === "regular" ? "" : `-${weight}`}.svg`
     );
   };
@@ -251,40 +123,6 @@ const Panel = () => {
       `${entry?.name}${weight === "regular" ? "" : `-${weight}`}.png`
     );
   };
-
-  const handleCopyPNG = async (
-    event: React.MouseEvent<HTMLButtonElement, MouseEvent>
-  ) => {
-    event.currentTarget.blur();
-    if (!entry) return;
-    if (!ref.current) return;
-
-    Svg2Png.toDataURL(cloneWithSize(ref.current, size))
-      .then((data) => fetch(data))
-      .then((res) => res.blob())
-      .then((blob) =>
-        navigator.clipboard.write([
-          new ClipboardItem({
-            [blob.type]: blob,
-          }),
-        ])
-      )
-      .then(() => {
-        setCopied(CopyType.PNG);
-      });
-  };
-
-  // const handleCopyDataPNG = async (
-  //   event: React.MouseEvent<HTMLButtonElement, MouseEvent>
-  // ) => {
-  //   event.currentTarget.blur();
-  //   if (!entry) return;
-  //   if (!ref.current) return;
-
-  //   const data = await Svg2Png.toDataURL(cloneWithSize(ref.current, size));
-  //   navigator.clipboard?.writeText(data);
-  //   setCopied(CopyType.PNG_DATA);
-  // };
 
   const handleDownloadWEBP = async (
     event: React.MouseEvent<HTMLButtonElement, MouseEvent>
@@ -317,6 +155,8 @@ const Panel = () => {
       }, 'image/webp');
     }
   };
+
+  const ref = useRef<SVGSVGElement>(null);
 
   return (
     <AnimatePresence initial={true}>

@@ -1,13 +1,9 @@
 import React, { useRef, useEffect, useState } from "react";
 import { motion, useAnimation } from "framer-motion";
 import { IconContext } from "@phosphor-icons/react";
-
 import { ApplicationTheme, useApplicationStore } from "@/state";
-import Notice from "@/components/Notice";
-
 import Panel from "./Panel";
 import IconGridItem from "./IconGridItem";
-import TagCloud from "./TagCloud";
 import "./IconGrid.css";
 import ColorInput from '@/components/ColorInput';
 import { Svg2Png } from 'svg2png-converter';
@@ -16,16 +12,6 @@ import ReactDOMServer from 'react-dom/server';
 import { IconStyle } from '@phosphor-icons/core';
 import { IconEntry } from '@/lib';
 import { InfoIcon } from '@phosphor-icons/react';
-
-const defaultSearchTags = [
-  "*new*",
-  "*updated*",
-  "communication",
-  "editor",
-  "emoji",
-  "maps",
-  "weather",
-];
 
 type IconGridProps = {};
 

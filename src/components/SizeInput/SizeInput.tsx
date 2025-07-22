@@ -1,20 +1,9 @@
 import React, { useCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
-
 import { useApplicationStore } from "@/state";
 import "./SizeInput.css";
 
-type SizeInputProps = {};
-
-const handleFocus = (event: React.UIEvent<HTMLInputElement>) => {
-  event.currentTarget.focus();
-};
-
-const handleBlur = (event: React.UIEvent<HTMLInputElement>) => {
-  event.currentTarget.blur();
-};
-
-const SizeInput = (_: SizeInputProps) => {
+const SizeInput = (_: {}) => {
   const { size, setSize } = useApplicationStore(useShallow((state) => ({
     size: state.iconSize,
     setSize: state.setIconSize,
@@ -26,7 +15,6 @@ const SizeInput = (_: SizeInputProps) => {
         target: { value },
       } = event;
       const sizeInput = parseInt(value);
-
       if (sizeInput > 0) setSize(sizeInput);
     },
     [setSize]
