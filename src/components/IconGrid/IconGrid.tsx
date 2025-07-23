@@ -46,7 +46,7 @@ const IconGrid = (_: {}) => {
   useEffect(() => {
     const fetchPragmaticIcons = async () => {
       const { data, error } = await supabase
-        .from('pragmatic_icons')
+        .from('pragmatic_icon')
         .select('*')
         .order('uploaded_at', { ascending: false });
       if (!error && data) {
@@ -81,7 +81,7 @@ const IconGrid = (_: {}) => {
       await supabase.storage.from(PRAGMATIC_ICON_BUCKET).remove([fileName]);
     }
     // Remove from table
-    await supabase.from('pragmatic_icons').delete().eq('id', icon.id);
+    await supabase.from('pragmatic_icon').delete().eq('id', icon.id);
     // Update UI
     setPragmaticIcons(pragmaticIcons.filter(i => i.id !== icon.id));
   };

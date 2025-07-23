@@ -120,7 +120,7 @@ const App: React.FC<any> = () => {
                 const { data: publicUrlData } = supabase.storage.from(PRAGMATIC_ICON_BUCKET).getPublicUrl(filePath);
                 const svg_url = publicUrlData.publicUrl;
                 // Insert row in pragmatic_icons table
-                const { error: insertError } = await supabase.from('pragmatic_icons').insert([{ name, svg_url }]);
+                const { error: insertError } = await supabase.from('pragmatic_icon').insert([{ name, svg_url }]);
                 if (insertError) throw insertError;
                 alert('Icon uploaded!');
                 refreshPragmaticIcons();
