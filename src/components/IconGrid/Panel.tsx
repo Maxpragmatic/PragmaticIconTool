@@ -10,6 +10,7 @@ import ReactDOMServer from 'react-dom/server';
 import { useMediaQuery } from "@/hooks";
 import { useApplicationStore } from "@/state";
 import ColorInput from '@/components/ColorInput';
+import { supabase } from '@/lib/supabase';
 
 const variants: Record<string, Variants> = {
   desktop: {
@@ -83,6 +84,48 @@ const Panel = () => {
   } = useApplicationStore();
 
   const [showInfo, setShowInfo] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [svgString, setSvgString] = useState<string | null>(null);
+  const [loadingSVG, setLoadingSVG] = useState(false);
+
+  // Detect if this is a Supabase-uploaded icon
+  const isSupabaseIcon = !!(entry && typeof entry === 'object' && 'svg_url' in entry && (entry as any).svg_url);
+
+  // Fetch SVG for Supabase icons
+  useEffect(() => {
+    if (isSupabaseIcon && entry && typeof entry === 'object' && 'svg_url' in entry && (entry as any).svg_url) {
+      setLoadingSVG(true);
+      fetch((entry as any).svg_url)
+        .then(res => res.text())
+        .then(setSvgString)
+        .finally(() => setLoadingSVG(false));
+    } else {
+      setSvgString(null);
+    }
+  }, [entry]);
+
+  // Copy helpers
+  const handleCopy = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(label);
+    setTimeout(() => setCopied(null), 1200);
+  };
+
+  // Snippet generators
+  const getReactSnippet = () =>
+    entry ? `import { ${entry.name.charAt(0).toUpperCase() + entry.name.slice(1)} } from "@phosphor-icons/react";\n\n<${entry.name.charAt(0).toUpperCase() + entry.name.slice(1)} size={32} color=\"#000\" />` : '';
+  const getSVGSnippet = () => {
+    if (isSupabaseIcon && svgString) return svgString;
+    // For built-in, render SVG as string
+    if (entry && entry.Icon) {
+      return ReactDOMServer.renderToStaticMarkup(
+        React.createElement(entry.Icon, { size: 32, color: '#000', weight })
+      );
+    }
+    return '';
+  };
+  const getImgSnippet = () =>
+    entry && typeof entry === 'object' && 'svg_url' in entry && (entry as any).svg_url ? `<img src="${(entry as any).svg_url}" width="32" height="32" alt="${entry.name}" />` : '';
 
   const isMobile = useMediaQuery("(max-width: 719px)");
 
@@ -132,14 +175,13 @@ const Panel = () => {
     if (!ref.current) return;
 
     // Render SVG as string
-    const svgString = ReactDOMServer.renderToStaticMarkup(
+    const svg = new window.DOMParser().parseFromString(svgString || ReactDOMServer.renderToStaticMarkup(
       React.createElement(entry.Icon, {
         size,
         color,
         weight,
       })
-    );
-    const svg = new window.DOMParser().parseFromString(svgString, 'image/svg+xml').documentElement as unknown as SVGSVGElement;
+    ), 'image/svg+xml').documentElement as unknown as SVGSVGElement;
     const dataUrl = await Svg2Png.toDataURL(svg);
     const img = new window.Image();
     img.src = dataUrl;
@@ -197,6 +239,43 @@ const Panel = () => {
                 </div>
               </figcaption>
             </figure>
+            {/* --- Copy Snippet Buttons --- */}
+            <div style={{ display: 'flex', gap: 12, margin: '12px 0' }}>
+              {!isSupabaseIcon && (
+                <>
+                  <button
+                    className="action-button text"
+                    onClick={() => handleCopy(getReactSnippet(), 'react')}
+                  >
+                    {copied === 'react' ? <CheckCircleIcon size={18} color="#1A2B44" /> : <CopyIcon size={18} color="#1A2B44" />} Copy React Snippet
+                  </button>
+                  <button
+                    className="action-button text"
+                    onClick={() => handleCopy(getSVGSnippet(), 'svg')}
+                  >
+                    {copied === 'svg' ? <CheckCircleIcon size={18} color="#1A2B44" /> : <CopyIcon size={18} color="#1A2B44" />} Copy SVG Snippet
+                  </button>
+                </>
+              )}
+              {isSupabaseIcon && (
+                <>
+                  <button
+                    className="action-button text"
+                    disabled={loadingSVG}
+                    onClick={() => svgString && handleCopy(svgString, 'svg')}
+                  >
+                    {copied === 'svg' ? <CheckCircleIcon size={18} color="#1A2B44" /> : <CopyIcon size={18} color="#1A2B44" />} Copy SVG Snippet
+                  </button>
+                  <button
+                    className="action-button text"
+                    onClick={() => handleCopy(getImgSnippet(), 'img')}
+                  >
+                    {copied === 'img' ? <CheckCircleIcon size={18} color="#1A2B44" /> : <CopyIcon size={18} color="#1A2B44" />} Copy &lt;img&gt; Snippet
+                  </button>
+                </>
+              )}
+            </div>
+            {/* --- End Copy Snippet Buttons --- */}
             <div style={{ margin: '16px 0 0 0', display: 'flex', gap: 24, alignItems: 'center' }}>
               <div>
                 <label htmlFor="export-size" style={{ fontSize: 13, color: '#8E8E93' }}>Size (px):</label>
