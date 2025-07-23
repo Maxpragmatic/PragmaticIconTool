@@ -14,13 +14,6 @@ const App: React.FC<any> = () => {
   }, []);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [uploadedIcons, setUploadedIcons] = React.useState<{ name: string, url: string }[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('uploadedIcons') || '[]');
-    } catch {
-      return [];
-    }
-  });
   const [allIcons, setAllIcons] = React.useState<{ name: string, url: string }[]>([]);
 
   // Fetch all icons from the backend
