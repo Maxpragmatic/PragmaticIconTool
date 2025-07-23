@@ -2,10 +2,10 @@ import React from "react";
 import "./App.css";
 import SearchInput from '@/components/SearchInput';
 import IconGrid from '@/components/IconGrid';
-import { supabase, PRAGMATIC_ICON_BUCKET } from '@/lib/supabase';
+
+const IMGUR_CLIENT_ID = '546f2b6b6b6b6b6'; // Demo client ID, replace with your own for production
 
 const App: React.FC<any> = () => {
-  // Add Founders Grotesk font to the body
   React.useEffect(() => {
     const font = new FontFace('Founders Grotesk', 'url(/FoundersGrotesk-Regular.otf)');
     font.load().then(() => {
@@ -14,6 +14,13 @@ const App: React.FC<any> = () => {
   }, []);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [uploadedIcons, setUploadedIcons] = React.useState<{ name: string, url: string }[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('uploadedIcons') || '[]');
+    } catch {
+      return [];
+    }
+  });
 
   // Helper to normalize SVG string
   const normalizeSVG = (svgString: string) => {
@@ -24,7 +31,6 @@ const App: React.FC<any> = () => {
       svg.setAttribute('width', '256');
       svg.setAttribute('height', '256');
       svg.setAttribute('viewBox', '0 0 256 256');
-      // Remove fill/stroke attributes from all children
       const walk = (el: Element) => {
         el.removeAttribute('fill');
         el.removeAttribute('stroke');
@@ -38,10 +44,38 @@ const App: React.FC<any> = () => {
     }
   };
 
-  // Refresh pragmatic icons in IconGrid after upload
-  const refreshPragmaticIcons = () => {
-    // Dispatch a custom event to notify IconGrid to refresh
-    window.dispatchEvent(new CustomEvent('refreshPragmaticIcons'));
+  const handleUpload = async (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const normalizedSVG = normalizeSVG(reader.result as string);
+        // Imgur requires base64 data
+        const base64SVG = btoa(unescape(encodeURIComponent(normalizedSVG)));
+        const name = file.name.replace(/\.svg$/i, '').toLowerCase();
+        const res = await fetch('https://api.imgur.com/3/image', {
+          method: 'POST',
+          headers: {
+            Authorization: `Client-ID ${IMGUR_CLIENT_ID}`,
+            Accept: 'application/json',
+          },
+          body: new URLSearchParams({
+            image: base64SVG,
+            type: 'base64',
+            name: file.name,
+          }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.data?.error || 'Imgur upload failed');
+        const url = data.data.link;
+        alert('Icon uploaded!');
+        const newIcons = [{ name, url }, ...uploadedIcons];
+        setUploadedIcons(newIcons);
+        localStorage.setItem('uploadedIcons', JSON.stringify(newIcons));
+      } catch (err: any) {
+        alert('Upload failed: ' + (err.message || err));
+      }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -105,33 +139,25 @@ const App: React.FC<any> = () => {
               alert('Only SVG files are allowed.');
               return;
             }
-            const reader = new FileReader();
-            reader.onload = async () => {
-              try {
-                // Normalize SVG
-                const normalizedSVG = normalizeSVG(reader.result as string);
-                // Get icon name from file (without extension)
-                const name = file.name.replace(/\.svg$/i, '').toLowerCase();
-                // Upload SVG to Supabase Storage
-                const filePath = `${name}-${Date.now()}.svg`;
-                const { error: uploadError } = await supabase.storage.from(PRAGMATIC_ICON_BUCKET).upload(filePath, normalizedSVG, { contentType: 'image/svg+xml', upsert: true });
-                if (uploadError) throw uploadError;
-                // Get public URL
-                const { data: publicUrlData } = supabase.storage.from(PRAGMATIC_ICON_BUCKET).getPublicUrl(filePath);
-                const svg_url = publicUrlData.publicUrl;
-                // Insert row in pragmatic_icons table
-                const { error: insertError } = await supabase.from('pragmatic_icon').insert([{ name, svg_url }]);
-                if (insertError) throw insertError;
-                alert('Icon uploaded!');
-                refreshPragmaticIcons();
-              } catch (err: any) {
-                alert('Upload failed: ' + (err.message || err));
-              }
-            };
-            reader.readAsText(file);
+            await handleUpload(file);
           }}
         />
       </div>
+      {/* Show uploaded icons for this user */}
+      {uploadedIcons.length > 0 && (
+        <div style={{ padding: 24, background: '#FFFDEB', borderBottom: '1px solid #EEE' }}>
+          <h3 style={{ fontFamily: 'Founders Grotesk, Arial, sans-serif', fontWeight: 400, fontSize: 18 }}>Your Uploaded Icons (this browser only)</h3>
+          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+            {uploadedIcons.map(icon => (
+              <div key={icon.url} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <img src={icon.url} alt={icon.name} style={{ width: 64, height: 64, background: '#fff', borderRadius: 8, border: '1px solid #EEE' }} />
+                <span style={{ fontSize: 13 }}>{icon.name}</span>
+                <input type="text" value={icon.url} readOnly style={{ width: 180, fontSize: 12, border: '1px solid #EEE', borderRadius: 4, padding: 2 }} onFocus={e => e.target.select()} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <main>
         <IconGrid />
       </main>
