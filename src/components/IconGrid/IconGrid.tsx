@@ -39,14 +39,12 @@ const IconGrid = (_: {}) => {
   const [batchSize, setBatchSize] = useState<number>(64);
   const [showBatchInfo, setShowBatchInfo] = useState(false);
   const [pragmaticIcons, setPragmaticIcons] = useState<PragmaticIcon[]>([]);
-  const [loadingPragmatic, setLoadingPragmatic] = useState(true);
 
   const clearSelected = () => setSelected([]);
 
   // Fetch pragmatic icons from Supabase
   useEffect(() => {
     const fetchPragmaticIcons = async () => {
-      setLoadingPragmatic(true);
       const { data, error } = await supabase
         .from('pragmatic_icons')
         .select('*')
@@ -54,7 +52,6 @@ const IconGrid = (_: {}) => {
       if (!error && data) {
         setPragmaticIcons(data);
       }
-      setLoadingPragmatic(false);
     };
     fetchPragmaticIcons();
   }, []);
