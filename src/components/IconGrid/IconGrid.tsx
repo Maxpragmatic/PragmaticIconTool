@@ -25,11 +25,9 @@ const IconGrid = (_: {}) => {
   const {
     iconWeight: weight,
     iconSize: size,
-    iconColor: color,
     applicationTheme,
     filteredQueryResults,
     searchQuery: query,
-    iconColor,
     setIconColor,
   } = useApplicationStore();
 
@@ -107,7 +105,7 @@ const IconGrid = (_: {}) => {
 
   return (
     <>
-      <IconContext.Provider value={{ weight, size, color, mirrored: false }}>
+      <IconContext.Provider value={{ weight, size, color: batchColor, mirrored: false }}>
         <div className="grid-container">
           <i id="beacon" className="beacon" />
           <motion.div
