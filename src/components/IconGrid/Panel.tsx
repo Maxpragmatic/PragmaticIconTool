@@ -80,6 +80,7 @@ const Panel = () => {
     selectionEntry: entry,
     setSelectionEntry,
     setIconSize,
+    setIconColor,
   } = useApplicationStore();
 
   const [showInfo, setShowInfo] = useState(false);
@@ -234,7 +235,7 @@ const Panel = () => {
               <figcaption>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <p style={{ margin: 0 }}>{entry.name}</p>
-                  <span><ColorInput className="inline-palette" /></span>
+                  <span><ColorInput className="inline-palette" value={color} onChange={setIconColor} /></span>
                 </div>
               </figcaption>
             </figure>

@@ -29,6 +29,8 @@ const IconGrid = (_: {}) => {
     applicationTheme,
     filteredQueryResults,
     searchQuery: query,
+    iconColor,
+    setIconColor,
   } = useApplicationStore();
 
   const originOffset = useRef({ top: 0, left: 0 });
@@ -96,6 +98,12 @@ const IconGrid = (_: {}) => {
         No icons found.
       </div>
     );
+
+  // Handler to sync batch color and global color
+  const handleBatchColorChange = (color: string) => {
+    setBatchColor(color);
+    setIconColor(color);
+  };
 
   return (
     <>
@@ -187,7 +195,7 @@ const IconGrid = (_: {}) => {
             </span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <label style={{ fontSize: 13, color: '#8E8E93', fontFamily: 'Founders Grotesk, Arial, sans-serif' }}>Color:</label>
-              <ColorInput value={batchColor} onChange={setBatchColor} />
+              <ColorInput value={batchColor} onChange={handleBatchColorChange} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <label style={{ fontSize: 13, color: '#8E8E93', fontFamily: 'Founders Grotesk, Arial, sans-serif' }}>Size (px):</label>
