@@ -11,11 +11,17 @@ import { saveAs } from 'file-saver';
 import ReactDOMServer from 'react-dom/server';
 import { IconStyle } from '@phosphor-icons/core';
 import { IconEntry } from '@/lib';
-import { InfoIcon } from '@phosphor-icons/react';
+import { InfoIcon, TrashIcon } from '@phosphor-icons/react';
+import { supabase, PRAGMATIC_ICON_BUCKET } from '@/lib/supabase';
 
-type IconGridProps = {};
+// Pragmatic icon type for Supabase
+interface PragmaticIcon {
+  id: string;
+  name: string;
+  svg_url: string;
+}
 
-const IconGrid = (_: IconGridProps) => {
+const IconGrid = (_: {}) => {
   const {
     iconWeight: weight,
     iconSize: size,
@@ -32,27 +38,67 @@ const IconGrid = (_: IconGridProps) => {
   const [batchColor, setBatchColor] = useState<string>('#000000');
   const [batchSize, setBatchSize] = useState<number>(64);
   const [showBatchInfo, setShowBatchInfo] = useState(false);
+  const [pragmaticIcons, setPragmaticIcons] = useState<PragmaticIcon[]>([]);
+  const [loadingPragmatic, setLoadingPragmatic] = useState(true);
 
-  const toggleSelect = (name: string) => {
-    setSelected(sel => sel.includes(name) ? sel.filter(n => n !== name) : [...sel, name]);
-  };
   const clearSelected = () => setSelected([]);
+
+  // Fetch pragmatic icons from Supabase
+  useEffect(() => {
+    const fetchPragmaticIcons = async () => {
+      setLoadingPragmatic(true);
+      const { data, error } = await supabase
+        .from('pragmatic_icons')
+        .select('*')
+        .order('uploaded_at', { ascending: false });
+      if (!error && data) {
+        setPragmaticIcons(data);
+      }
+      setLoadingPragmatic(false);
+    };
+    fetchPragmaticIcons();
+  }, []);
+
+  // Helper: built-in pragmatic icons (for now, just 'gear')
+  const isBuiltInPragmaticIcon = (icon: IconEntry) => icon.name === 'gear';
+  const builtInPragmaticIcons = [...filteredQueryResults].filter(isBuiltInPragmaticIcon).sort((a, b) => a.name.localeCompare(b.name));
+  const regularIcons = [...filteredQueryResults].filter(icon => !isBuiltInPragmaticIcon(icon)).sort((a, b) => a.name.localeCompare(b.name));
+
+  // Merge built-in and Supabase pragmatic icons for display
+  const allPragmaticIcons = [
+    ...pragmaticIcons.map(icon => ({
+      ...icon,
+      isSupabase: true,
+    })),
+    ...builtInPragmaticIcons.map(icon => ({
+      ...icon,
+      isSupabase: false,
+    })),
+  ];
+
+  // Delete pragmatic icon (Supabase only)
+  const handleDeletePragmaticIcon = async (icon: PragmaticIcon) => {
+    // Remove from storage
+    const fileName = icon.svg_url.split('/').pop() || '';
+    if (fileName) {
+      await supabase.storage.from(PRAGMATIC_ICON_BUCKET).remove([fileName]);
+    }
+    // Remove from table
+    await supabase.from('pragmatic_icons').delete().eq('id', icon.id);
+    // Update UI
+    setPragmaticIcons(pragmaticIcons.filter(i => i.id !== icon.id));
+  };
 
   useEffect(() => {
     controls.start("visible");
-  }, [controls, filteredQueryResults]);
+  }, [controls, filteredQueryResults, pragmaticIcons]);
 
-  if (!filteredQueryResults.length)
+  if (!filteredQueryResults.length && !pragmaticIcons.length)
     return (
       <div style={{ padding: 32, textAlign: 'center', color: '#8E8E93' }}>
         No icons found.
       </div>
     );
-
-  // Helper: pragmatic icons (for now, just 'gear')
-  const isPragmaticIcon = (icon: IconEntry) => icon.name === 'gear';
-  const pragmaticIcons = [...filteredQueryResults].filter(isPragmaticIcon).sort((a, b) => a.name.localeCompare(b.name));
-  const regularIcons = [...filteredQueryResults].filter(icon => !isPragmaticIcon(icon)).sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <>
@@ -65,12 +111,12 @@ const IconGrid = (_: IconGridProps) => {
             initial="hidden"
             animate={controls}
           >
-            {pragmaticIcons.map((iconEntry, index) => (
-              <div key={iconEntry.name} style={{ position: 'relative', overflow: 'visible' }}>
+            {allPragmaticIcons.map((iconEntry: any, index: number) => (
+              <div key={iconEntry.name + (iconEntry.id || '')} style={{ position: 'relative', overflow: 'visible' }}>
                 <input
                   type="checkbox"
                   checked={selected.includes(iconEntry.name)}
-                  onChange={() => toggleSelect(iconEntry.name)}
+                  onChange={() => setSelected(sel => sel.includes(iconEntry.name) ? sel.filter(n => n !== iconEntry.name) : [...sel, iconEntry.name])}
                   style={{ position: 'absolute', top: 4, left: 4, zIndex: 10, width: 18, height: 18, accentColor: '#FFFF00', background: '#fff', borderRadius: 4, border: '1px solid #EEE' }}
                   aria-label={`Select ${iconEntry.name}`}
                 />
@@ -80,9 +126,18 @@ const IconGrid = (_: IconGridProps) => {
                   entry={iconEntry}
                   originOffset={originOffset}
                 />
+                {iconEntry.isSupabase && (
+                  <button
+                    style={{ position: 'absolute', top: 4, right: 4, background: 'none', border: 'none', cursor: 'pointer', zIndex: 11 }}
+                    title="Delete icon"
+                    onClick={() => handleDeletePragmaticIcon(iconEntry)}
+                  >
+                    <TrashIcon size={18} color="#FF495C" />
+                  </button>
+                )}
               </div>
             ))}
-            {pragmaticIcons.length > 0 && regularIcons.length > 0 && (
+            {allPragmaticIcons.length > 0 && regularIcons.length > 0 && (
               <div style={{ width: '100%', height: 24 }} />
             )}
             {regularIcons.map((iconEntry, index) => (
@@ -90,12 +145,12 @@ const IconGrid = (_: IconGridProps) => {
                 <input
                   type="checkbox"
                   checked={selected.includes(iconEntry.name)}
-                  onChange={() => toggleSelect(iconEntry.name)}
+                  onChange={() => setSelected(sel => sel.includes(iconEntry.name) ? sel.filter(n => n !== iconEntry.name) : [...sel, iconEntry.name])}
                   style={{ position: 'absolute', top: 4, left: 4, zIndex: 10, width: 18, height: 18, accentColor: '#FFFF00', background: '#fff', borderRadius: 4, border: '1px solid #EEE' }}
                   aria-label={`Select ${iconEntry.name}`}
                 />
                 <IconGridItem
-                  index={index + pragmaticIcons.length}
+                  index={index + allPragmaticIcons.length}
                   isDark={applicationTheme === ApplicationTheme.DARK}
                   entry={iconEntry}
                   originOffset={originOffset}
