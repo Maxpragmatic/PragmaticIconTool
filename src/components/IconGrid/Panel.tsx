@@ -10,7 +10,6 @@ import ReactDOMServer from 'react-dom/server';
 import { useMediaQuery } from "@/hooks";
 import { useApplicationStore } from "@/state";
 import ColorInput from '@/components/ColorInput';
-import { supabase } from '@/lib/supabase';
 
 const variants: Record<string, Variants> = {
   desktop: {
