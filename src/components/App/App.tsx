@@ -21,6 +21,15 @@ const App: React.FC<any> = () => {
       return [];
     }
   });
+  const [allIcons, setAllIcons] = React.useState<{ name: string, url: string }[]>([]);
+
+  // Fetch all icons from the backend
+  React.useEffect(() => {
+    fetch('/api/icons')
+      .then(res => res.json())
+      .then(setAllIcons)
+      .catch(() => setAllIcons([]));
+  }, []);
 
   // Helper to normalize SVG string
   const normalizeSVG = (svgString: string) => {
@@ -49,7 +58,6 @@ const App: React.FC<any> = () => {
     reader.onload = async () => {
       try {
         const normalizedSVG = normalizeSVG(reader.result as string);
-        // Imgur requires base64 data
         const base64SVG = btoa(unescape(encodeURIComponent(normalizedSVG)));
         const name = file.name.replace(/\.svg$/i, '').toLowerCase();
         const res = await fetch('https://api.imgur.com/3/image', {
@@ -67,10 +75,18 @@ const App: React.FC<any> = () => {
         const data = await res.json();
         if (!data.success) throw new Error(data.data?.error || 'Imgur upload failed');
         const url = data.data.link;
+        // POST to backend
+        await fetch('/api/icons', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, url }),
+        });
         alert('Icon uploaded!');
-        const newIcons = [{ name, url }, ...uploadedIcons];
-        setUploadedIcons(newIcons);
-        localStorage.setItem('uploadedIcons', JSON.stringify(newIcons));
+        // Refresh icon list
+        fetch('/api/icons')
+          .then(res => res.json())
+          .then(setAllIcons)
+          .catch(() => {});
       } catch (err: any) {
         alert('Upload failed: ' + (err.message || err));
       }
@@ -143,12 +159,12 @@ const App: React.FC<any> = () => {
           }}
         />
       </div>
-      {/* Show uploaded icons for this user */}
-      {uploadedIcons.length > 0 && (
+      {/* Show all uploaded icons for all users */}
+      {allIcons.length > 0 && (
         <div style={{ padding: 24, background: '#FFFDEB', borderBottom: '1px solid #EEE' }}>
-          <h3 style={{ fontFamily: 'Founders Grotesk, Arial, sans-serif', fontWeight: 400, fontSize: 18 }}>Your Uploaded Icons (this browser only)</h3>
+          <h3 style={{ fontFamily: 'Founders Grotesk, Arial, sans-serif', fontWeight: 400, fontSize: 18 }}>All Uploaded Icons</h3>
           <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-            {uploadedIcons.map(icon => (
+            {allIcons.map(icon => (
               <div key={icon.url} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                 <img src={icon.url} alt={icon.name} style={{ width: 64, height: 64, background: '#fff', borderRadius: 8, border: '1px solid #EEE' }} />
                 <span style={{ fontSize: 13 }}>{icon.name}</span>
