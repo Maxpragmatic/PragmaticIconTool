@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 
-const ICONS_FILE = path.resolve(process.cwd(), 'api', 'icons.json');
+const ICONS_FILE = path.resolve(process.cwd(), 'data', 'icons.json');
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
